@@ -1,0 +1,120 @@
+\part{Service-oriented Computing}
+\chapter{RESTful services}
+\label{RESTful}
+
+REST sta per REpresentational State Transfer, nome poco chiaro cosi si intende con il titolo.
+Con \gls{REST} si intende che ogni azione risulta in una transizione al prossimo stato
+dell'applicazione dato il trasferimento di una rappresentazione a quello stato per l'utente.
+\footnote{Tradotto da: with each action resulting in a transition to the next state of
+  the application by transferring a rapresentation of that state to the user}
+
+Lo stato e' l'insieme attuale delle risorse, ogni modifica implichera' un cambio di stato.
+
+Le idee chiave sono due:
+- il servizio e' un \textbf{insieme di risorse}, tutte queste risorse sono accessibili ovunque
+(mediante l'indirizzo URI assegnatoli)
+- l'accesso alle risorse avviene mediante lo standard \textit{HTTP} per create/read/update/delete
+
+\gls{REST} e' \textit{``resource-centric''} (SOAP ``message-centric''), chi progetta servizi con \gls{REST} deve
+pensarle in termini di risorse. I vari stati (con le risorse) sono richieste e trasmesse mediante
+chiamate HTTP.
+
+I motivi di questa strategia:
+- \textbf{semplicita'}, poche operazioni
+- \textbf{scalabilita'}, stateless protocol (il server non tiene traccia dello storico degli stati) e
+distributed state.
+- \textbf{layeredness}, permette di aggiungere vari strati intermedi (firewall, gateway, routing, ...)
+
+\section{REST principles}
+\paragraph{Resource identification through URIs}
+Ogni risorsa e' identifica con un URI
+\paragraph{Uniform interface}
+Vi sono quattro operazioni fisse che possono essere usate:
+- \textit{DELETE} cancella la risorsa
+- \textit{GET} ottenimento dello stato corrente di una risorsa
+- \textit{POST} trasferimento di un nuovo stato della risorsa
+- \textit{PUT} creare una nuova risorsa
+\paragraph{Self-descriptive messages}
+Il server e' stateless, quindi le richieste devono contenere qualche informazioni per eseguire correttamente
+il messaggio.
+Le risorse sono disaccopiate dalla loro rappresenzione cosi da ottenere la interoperabilita' tra
+rappresentazioni (es. HTML, XML, plain text, PDF, JPEG, etc.). Questo offre maggior flessibilita' e varieta'
+offerte dal servizio! Se uno preferisce inviare JSON invia JSON, se un altro preferisce XML invia XML!
+\paragraph{Stateful interactions throught hyperlinks}
+E' interessare che le applicazioni web sono stateful quando il protocollo alla base del web (HTTP) e' stateless!
+Le applicazioni web funzionano mediante la combinazione tra HTTP (stateless) + cookie (memory!).
+In \gls{REST} ogni interazione con la risorsa e' stateless ed il server non contiene lo stato del client e l'utente
+se vuole memorizzare dovra' utilizzare altre vie.
+
+Esempio 1: Fred Flinston vuole aggiornare l'ordine del suo ultimo pasto. Fred-client richiedera' a
+barbera.com-server tutte le informazioni necessarie compreso l'aggiornamento.
+
+Fred-client -> GET /customers/fred -> barbera.com
+Fred-client <- 200 OK <customer>...<orders>http://barbera.com/customers/fred/orders</orders></customer> <- barbera.com
+
+Nota: Si noti che il progettista di barbera.com ha definito che gli ordini sono divisi tra UTENTI! Quindi se voglio
+tutti gli ordini dovro' navigare tra richieste \gls{REST}. Il tutto dipende come il sistema e' distribuito e come sono
+organizzate le risorse (alcune query saranno lente altre molto veloci).
+
+Fred-client -> /customers/fred/orders -> barbera.com
+Fred-client <- 200 OK <orders>...<order id=''1''><orderURL>http://barbera.com/orders/1122</orderURL>...</order>...</orders> <- barbera.com
+Fred-client -> GET /orders/1122 -> barbera.com
+Fred-client <- 200 OK <order>...<item quantity=''1''>brontoburger</item></order> <- barbera.com
+Fred-client -> PUT /orders/1122 <order><customer>http://barbera.com/customers/fred</customer><item quantitiy=''50''>brontoburger</item></order> -> barbera.com
+Fred-client <- 200 OK <- barbera.com
+
+Si puo' apprezzare come i messaggi siano semplici ma si puo' anche notare quanto ce ne siano voluti per aggiornare una quantita.
+
+Esempio 2: Usare un semplice servizio Doodle per organizzare il prossimo venerdi' sera
+Fred-client -> POST /polls <title>Friday night</title><options>...</options> -> barbera.com
+Fred-client <- 201 created Content-Location: /polls/112233 <- barbera.com
+
+Ora Barnie vuole decidere una delle opzioni di Fred, assumiamo che conosca l'indirizzo.
+
+barbera.com <- GET /polls/112233 <- Barnie-client
+barbera.com -> 200 OK <poll>...<votes href=''/vote''></poll> -> Barnie-client
+barbera.com <- POST /polls/112233/vote <name>Barnie</name><choice>poll<choice> <- Freid-client
+barbera.com -> 201 Created Content-Location: /polls/112233/vote/1 -> Barnie-client
+
+Fred-client -> GET /polls/112233 -> barbera.com
+Fred-client <- 200 OK <title>Friday night</title><votes><vote id=''1''><name>Barnie</name>...</vote> <- barbera.com
+Fred-client -> DELETE /polls/112233 -> barbera.com
+Fred-client <- 200 OK <- barbera.com
+
+\section{Strenghts of REST}
+\paragraph{Semplicita'}
+- Davvero semplice da imparare
+- \gls{REST} leverages well-know standards
+- l'infrastruttura e' gia' diventata pervasiva (HTTP clients e server sono disponibili in tutti i linguaggi di programmazione e sistemi operativi)
+- gli strumenti di sviluppo sono minimi, gli stessi per creare una qualsiasi applicazione web dinamica
+- i test possono essere effettuari da un ordinario browser
+- mediante URI e hyperlinks e' possibile scoprire risorse Web senza registrazioni compulsive a repository
+\paragraph{Efficiency}
+- leggerissimo (semplicissmo HTTP 1.1)
+- semplicita' di scelta del messaggio, con la conseguente ottimizzazione
+\paragraph{Scalabilty}
+
+\section{Weaknesses of REST}
+\paragraph{Confusione}
+Difficile stabile quali siano i migliori modi per costruire RESTfulWeb service. Hi-REST raccomanda l'uso di 4 verbi (GET, POST, PUT, DELETE),
+tuttavia HTTP e' piu' ampio e permette anche l'overriding dei verbi!
+\paragraph{Nomi}
+Mediante l'uri si crea un albero che nel quale se la risorsa cercata e' troppo in profondita' allora il mio URI sara' troppo lungo e non verra'
+accettata dal web server! In quel caso l'unica opzione e' la ristrutturazione del servizio.
+
+Altra alternativa e' SOAP in cui i messaggi sono codificati mediante un dialetto di XML pero' e' molto (MOLTO!) piu' complesso!
+
+Tuttavia \gls{REST} services hanno delle mancanze:
+- non ha la complessita' dei layer di WS-* stack
+- non semplice estendere RESTful Web service per supportare avanzate funzionalita' in modo interoperabilie
+- decisioni facili che si possono prendere in RESTful posso portare a \textbf{significanti sforzi di sviluppo} e \textbf{problemi tecnici}
+(ad esempio l'esatta specifica delle risorse e lo schema del loro indirizzamento URI)
+
+\gls{REST} puo' essere una scelta \textbf{SE} le funzionalita' a livello enterprise di WS-* (transazioni, reliability, livello di sicurezza
+dei messaggi) non sono richieste.
+
+In generale \gls{REST} conviene:
+- per avere (semplici) servizi in esecuzione
+- per integrazioni tattiche, ad hoc sul Web (e.g., mashups)
+
+WS-* e' da preferire per scenari di professional enterprise application integration a lungo termine e con un alto \gls{QoS}.
